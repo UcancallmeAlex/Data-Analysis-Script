@@ -1,5 +1,4 @@
---Section B
---Source Johnson, Bruce, D191 Functions Tutorial.
+
 CREATE OR REPLACE FUNCTION rate_per_day_function (rental_rate NUMERIC(4,2), rental_duration SMALLINT)
 RETURNS numeric(4,2) AS $rate_per_day$
 DECLARE rate_per_day numeric(4,2);
@@ -9,8 +8,7 @@ BEGIN
 END; $rate_per_day$
 LANGUAGE PLPGSQL;
 
---Section C
---Detailed
+
 CREATE TABLE detailed_table
 (category_name varchar(50),
 film_title varchar(200),
@@ -20,7 +18,7 @@ rate_per_day numeric(4,2)
 );
 
 
---Summary
+
 CREATE TABLE summary_table
 (category_name varchar(50),
  average_rate_per_day numeric(4,2),
@@ -28,8 +26,7 @@ CREATE TABLE summary_table
 );
 
 
---Section D
---Detailed Table
+
 INSERT INTO detailed_table
 SELECT category.name, film.title, film.rental_rate, film.rental_duration,
 rate_per_day_function(film.rental_rate, film.rental_duration) AS rate_per_day
@@ -42,7 +39,7 @@ WHERE film_category.category_id = 14 OR film_category.category_id = 11;
 SELECT *
 FROM detailed_table
 
---Summary Table
+
 INSERT INTO summary_table
 SELECT detailed_table.category_name,
 ROUND(AVG(rate_per_day_function(detailed_table.rental_rate, detailed_table.rental_duration)),2)
@@ -56,7 +53,7 @@ GROUP BY detailed_table.category_name;
 SELECT *
 FROM summary_table
 
---Section E
+
 --Source Johnson, Bruce, Triggers & Stored Procedures
 CREATE OR REPLACE FUNCTION insert_new_film_function()
 RETURNS TRIGGER
@@ -98,7 +95,7 @@ DROP TABLE detailed_table;
 DROP TABLE summary_table;
 
 
---Section F
+
 --Source Johnson, Bruce, Triggers & Stored Procedures
 CREATE OR REPLACE PROCEDURE create_detailed_and_summary_tables()
 LANGUAGE plpgsql
