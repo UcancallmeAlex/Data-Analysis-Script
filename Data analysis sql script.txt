@@ -1,0 +1,147 @@
+--Section B
+--Source Johnson, Bruce, D191 Functions Tutorial.
+CREATE OR REPLACE FUNCTION rate_per_day_function (rental_rate NUMERIC(4,2), rental_duration SMALLINT)
+RETURNS numeric(4,2) AS $rate_per_day$
+DECLARE rate_per_day numeric(4,2);
+BEGIN
+      SELECT rental_rate/rental_duration INTO rate_per_day;
+      RETURN rate_per_day;
+END; $rate_per_day$
+LANGUAGE PLPGSQL;
+
+--Section C
+--Detailed
+CREATE TABLE detailed_table
+(category_name varchar(50),
+film_title varchar(200),
+rental_rate numeric(4,2),
+rental_duration smallint,
+rate_per_day numeric(4,2)
+);
+
+
+--Summary
+CREATE TABLE summary_table
+(category_name varchar(50),
+ average_rate_per_day numeric(4,2),
+ sum_rate_per_day numeric(4,2)
+);
+
+
+--Section D
+--Detailed Table
+INSERT INTO detailed_table
+SELECT category.name, film.title, film.rental_rate, film.rental_duration,
+rate_per_day_function(film.rental_rate, film.rental_duration) AS rate_per_day
+FROM film
+INNER JOIN film_category ON film.film_id = film_category.film_id
+INNER JOIN category ON category.category_id = film_category.category_id
+WHERE film_category.category_id = 14 OR film_category.category_id = 11;
+
+
+SELECT *
+FROM detailed_table
+
+--Summary Table
+INSERT INTO summary_table
+SELECT detailed_table.category_name,
+ROUND(AVG(rate_per_day_function(detailed_table.rental_rate, detailed_table.rental_duration)),2)
+AS average_rate_per_day,
+SUM(rate_per_day_function(detailed_table.rental_rate, detailed_table.rental_duration))
+AS sum_rate_per_day
+FROM detailed_table
+GROUP BY detailed_table.category_name;
+
+
+SELECT *
+FROM summary_table
+
+--Section E
+--Source Johnson, Bruce, Triggers & Stored Procedures
+CREATE OR REPLACE FUNCTION insert_new_film_function()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+DELETE FROM summary_table;
+INSERT INTO summary_table
+SELECT detailed_table.category_name,
+ROUND(AVG(rate_per_day_function(detailed_table.rental_rate, detailed_table.rental_duration)),2) AS average_rate_per_day,
+SUM(rate_per_day_function(detailed_table.rental_rate, detailed_table.rental_duration)) AS sum_rate_per_day
+FROM detailed_table
+GROUP BY detailed_table.category_name;
+RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER new_film
+      AFTER INSERT
+      ON detailed_table
+      FOR EACH STATEMENT
+      EXECUTE PROCEDURE insert_new_film_function();
+      
+
+      
+
+--Test insert
+INSERT INTO detailed_table (category_name, film_title, rental_duration, rental_rate, rate_per_day)
+VALUES ('Horror', 'Test Movie', 1, 35.50, 35.50);
+
+SELECT *
+FROM detailed_table;
+
+SELECT *
+FROM summary_table;
+
+--Drop tables
+DROP TABLE detailed_table;
+DROP TABLE summary_table;
+
+
+--Section F
+--Source Johnson, Bruce, Triggers & Stored Procedures
+CREATE OR REPLACE PROCEDURE create_detailed_and_summary_tables()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+DROP TABLE IF EXISTS detailed_table;
+DROP TABLE IF EXISTS summary_table;
+CREATE TABLE detailed_table
+(category_name varchar(50),
+film_title varchar(200),
+rental_rate numeric(4,2),
+rental_duration smallint,
+rate_per_day numeric(4,2)
+);
+CREATE TABLE summary_table
+(category_name varchar(50),
+ average_rate_per_day numeric(4,2),
+ sum_rate_per_day numeric(4,2)
+);
+
+INSERT INTO detailed_table
+SELECT category.name, film.title, film.rental_rate, film.rental_duration,
+rate_per_day_function(film.rental_rate, film.rental_duration) AS rate_per_day
+FROM film
+INNER JOIN film_category ON film.film_id = film_category.film_id
+INNER JOIN category ON category.category_id = film_category.category_id
+WHERE film_category.category_id = 14 OR film_category.category_id = 11;
+
+INSERT INTO summary_table
+SELECT detailed_table.category_name,
+ROUND(AVG(rate_per_day_function(detailed_table.rental_rate, detailed_table.rental_duration)),2) AS average_rate_per_day,
+SUM(rate_per_day_function(detailed_table.rental_rate, detailed_table.rental_duration)) AS sum_rate_per_day
+FROM detailed_table
+GROUP BY detailed_table.category_name;
+
+RETURN;
+END;
+$$;
+
+CALL create_detailed_and_summary_tables();
+
+SELECT *
+FROM detailed_table;
+
+SELECT *
+FROM summary_table;
